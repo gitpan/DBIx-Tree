@@ -65,11 +65,13 @@ or (Win32 with MS Visual C++):
 When you tell a user id and password to the configuration portion of 
 Makefile.PL, be aware that this is being stored in a file called PWD. 
 It is recommended that you only choose a user id and password on a
-non-production server.
+non-production server, since this module will drop and create a table
+in that data source (the food table).
 
 As of this version, this has only been tested on:
 
   Windows NT 4.0 SP3, ActivePerl 502, DBD::Sybase
   Sparc/Linux 2.0.35, Perl 5.004_04, DBD::mSQL
+  RedHat Linux 6.1, Perl 5.005_04, DBD::mSQL
 
-Brian Jepson, bjepson@ids.net
+Brian Jepson, bjepson@jepstone.net

@@ -1,5 +1,10 @@
 Revision history for Perl extension DBIx::Tree.
 
-0.01  Sun Aug 30 17:08:09 1998
+0.90  Sun Aug 30 17:08:09 1998
 	- original version; created by h2xs 1.18
 
+0.91  Thu Aug 24 20:36:00 2000
+    - added performance improvements, sorting, and bug fixes from
+      Jan Mach <machj@ders.cz>
+    - added limit and matching support from Ilia Lobsanov <ilia@lobsanov.com>
+    

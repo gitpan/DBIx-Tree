@@ -12,7 +12,7 @@ require Exporter;
 @EXPORT = qw(
 	
 );
-$VERSION = '0.90';
+$VERSION = '0.91';
 
 
 # Preloaded methods go here.
@@ -39,6 +39,8 @@ sub new {
     $self->{parent_id_column} = $columns->[2];
 
     $self->{start_id} = $args{start_id};
+    $self->{match_data} = $args{match_data};
+    $self->{limit} = $args{limit};
 
     return $self;
 }
@@ -48,7 +50,15 @@ sub do_query {
     my $self = shift;
 
     my $columns = join(', ', @{ $self->{columns} } );
-    my $sql = "SELECT $columns FROM " . $self->{table};
+
+    my $sql = "SELECT $columns FROM " . ($self->{table});
+    if ( $self->{match_data} ) {
+        $sql .= " WHERE $self->{data_column} like '$self->{match_data}%'";
+    }
+    if ( $self->{limit} ) {
+        $sql .= " LIMIT $self->{limit}";
+    }
+    $sql .= ' order by ' . ($self->{data_column});
 
     my $sth = $self->{dbh}->prepare($sql);
     my $rc = $sth->execute;
@@ -57,16 +67,9 @@ sub do_query {
 	return 0;
     }
 
-    my (@array, $recno);
-    $recno = 0;
-    while (my $href = $sth->fetchrow_hashref) {
-      foreach (@{ $self->{columns} }) {
-	$array[$recno]{$_} = $href->{$_};
-      }
-      $recno++;
-    }
-
-    @{$self->{data}} = @array;
+    $self->{data} = $sth->fetchall_arrayref({});
+    
+    $sth->finish if $sth->{Active};
     
     1; # return success
 
@@ -78,19 +81,32 @@ sub tree {
 
   my @array = @{ $self->{data} };
 
-  my (%stack, $current);
+  my ($current, @order, @stack);
   
+  my (%id_cols, %id_pnts);
+
+  my $i = -1;
+  foreach my $aitem (@array) {
+    $i++;
+    if ( defined $aitem->{$self->{parent_id_column}} ) {
+      push @{ $id_pnts{ $aitem->{$self->{parent_id_column}} } }, $aitem->{$self->{id_column}};
+    }
+    if ( defined $aitem->{$self->{id_column}} ) {
+      $id_cols{ $aitem->{$self->{id_column}} } = $i;
+    }
+  }
+
   my $level = 1;
 
   # this non-recursive algorithm requires the use of a 
   # stack in order to process each element. After each
   # element is processed, it is removed from the stack 
-  # (actually, the value of the hash that represents
-  # the item is set to 0), and its children on the next
+  # and its children on the next
   # level are added to the stack. Then it starts all over
   # again until we run out of elements.
   #
-  $stack{ $self->{start_id} } = 1;
+  push @order, $self->{start_id};
+  push @stack, 1;
 
   # $level starts out at 1. Every time we run out of items
   # to process at the current level (if $levelFound == 0)
@@ -98,23 +114,30 @@ sub tree {
   # items to process, and can call it quits.
   #
   my (@parent_id, @parent_name);
+  
   while ($level) {
 
     # search the stack for an item whose level matches
     # $level.
     #
     my $levelFound = 0;
-    foreach my $index (keys %stack) {
-      if ($stack{$index} == $level) {
+    my $i = -1;
+    foreach my $index (@stack) {
+      $i++;
+      if ($index == $level) {
 	
 	# if we have found something whose level is equal
 	# to $level, set the variable $current so we can
 	# refer to it later. Also, set the flag $levelFound
 	#
-	$current = $index;
+	$current = $order[$i];
 	$levelFound = 1;
+
+	# since we've found record we don't need it on stack
+	splice(@order,$i,1);
+	splice(@stack,$i,1);
+
 	last;
-	
       } 
     }
     
@@ -125,8 +148,6 @@ sub tree {
     #
     if ($levelFound) {
 
-      my $reccount = $#array;
-
       ######################################
       #
       # loop through the array of rows until
@@ -136,9 +157,9 @@ sub tree {
       #
       ######################################
       my $item;
-      for (my $i = 0; $i <= $reccount; $i++) {
 
-	if ($array[$i]{$self->{id_column}} eq $current) {
+      my $aryitem = $id_cols{ $current };
+      if (defined $aryitem) {
 	
 	  ###############################
 	  #
@@ -151,7 +172,7 @@ sub tree {
 	  # created in the new method
 	  #
 	  ###############################
-	  $item   = $array[$i]{$self->{data_column}};
+	  $item = $array[$aryitem]->{$self->{data_column}};
 	
 	  ###############################
 	  #
@@ -171,10 +192,9 @@ sub tree {
 		  id          => $current, 
 		  parent_id   => \@parent_id, 
 		  parent_name => \@parent_name );
-	  last;
-	}
+
+
       }
-      $stack{$current} = 0;
 
       #################################
       #
@@ -182,13 +202,13 @@ sub tree {
       # of the current item to the stack
       #
       ###############################
-      $reccount = $#array;
-      for (my $i = 1; $i <= $reccount; $i++) {
-
-	if ($array[$i]{$self->{parent_id_column}} eq $current) {
-	  $stack{$array[$i]{$self->{id_column}}} = $level + 1;
-	}
-
+      
+      my $aitem = $id_pnts{ $current };
+      if (defined $aitem) {
+          foreach my $id ( @{ $aitem } ) {
+	    push @stack, $level + 1;
+	    push @order, $id;
+	  }
       }
 
       if ($item && $current) {
@@ -196,7 +216,7 @@ sub tree {
           push @parent_name, $item;
       }
       $level++ ;
-
+      
     } else {
 
       $level--;
@@ -222,7 +242,7 @@ DBIx::Tree - Perl module for generating a tree from a self-referential table
 =head1 SYNOPSIS
 
   use DBIx::Tree;
-  my $tree = new DBIx::Tree( connection => $dbh, 
+  my $tree = new DBIx::Tree(connection => $dbh, 
                             table      => $table,
                             method     => sub { disp_tree(@_) },
                             columns    => [$id_col, $label_col, $parent_col],
@@ -286,6 +306,61 @@ into:
 There are examples in the examples directory - one plain text example, and
 two Tk examples.
 
+=head1 Constructor arguments
+
+  my $tree = new DBIx::Tree(connection => $dbh, 
+                            table      => $table,
+                            method     => sub { disp_tree(@_) },
+                            columns    => [$id_col, $label_col, $parent_col],
+                            start_id   => $start_id,
+                            match_data => $match_data,
+                            limit      => $limit);
+
+=over 4
+
+=item connection
+
+A DBI connection handle.
+
+=item table
+
+The database table containing the hierarchical data.
+
+=item method
+
+A callback method to be invoked each time a tree item is encountered. This
+method will be given a hashtable as a parameter, containing the following
+elements:
+
+  item:        the name of the item
+  level (0-n): the nesting level of the item.
+  id:          the unique id of the item.
+
+=item columns: 
+
+A list of three columns from the table:
+
+  id_col:     The unique id.
+  label_col:  The textual data of the row, like a name.
+  parent_col: The id of the row's parent.
+
+=item start_id
+
+The unique id of the root item.
+
+=item match_data
+
+The value of a partial match to look for - if this is supplied, only rows
+whose label_col matches (match_data + '%') this will be selected. This
+feature was supplied by Ilia Lobsanov <ilia@lobsanov.com>
+
+=item limit
+
+Limit the number of rows using an SQL LIMIT clause - not all SQL servers
+support this. This feature was supplied by Ilia Lobsanov <ilia@lobsanov.com>
+
+=back
+
 =head1 TODO
 
 Graceful handling of circular references.
@@ -300,6 +375,9 @@ Brian Jepson, bjepson@ids.net
 This module was inspired by the Expanding Hierarchies example that I
 stumbled across in the Microsoft SQL Server Database Developer's Companion
 section of the Microsoft SQL Server Programmer's Toolkit.
+
+Jan Mach <machj@ders.cz> contributed substantial performance improvements, 
+ordering handling for tree output, and other bug fixes.
 
 =head1 SEE ALSO
 

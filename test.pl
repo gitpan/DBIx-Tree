@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..5\n"; }
+BEGIN { $| = 1; print "1..6\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use DBIx::Tree;
 $loaded = 1;
@@ -82,11 +82,8 @@ if ($tree->do_query) {
 use vars qw($compare);
 
 $tree->tree;
-$rc = $compare eq 'FoodDairyBeveragesCoffee MilkWhole MilkSkim MilkCheeses' .
-                  'CheddarStiltonSwissGoudaMuensterBeans and NutsBeans' .
-                  'Black BeansKidney BeansRed Kidney BeansBlack Kidney' .
-                  ' BeansNutsPecans';
-if ($rc) {
+$rc = $compare eq 'FoodBeans and NutsBeansBlack BeansKidney BeansBlack Kidney BeansRed Kidney BeansNutsPecansDairyBeveragesCoffee MilkSkim MilkWhole MilkCheesesCheddarGoudaMuensterStiltonSwiss';
+if ($rc == 1) {
     print "ok 5\n";
 } else {
     print "not ok 5\n";
@@ -98,6 +95,24 @@ sub disp_tree {
     $item =~ s/^\s+//;
     $item =~ s/\s+$//;
     $compare .= $item;
+}
+
+############# create another instance of the DBIx::Tree 
+my $tree = new DBIx::Tree(connection => $dbh, 
+                          table      => 'food', 
+                          method     => sub { disp_tree(@_) },
+                          columns    => ['food_id', 'food', 'parent_id'],
+                          start_id   => '001',
+                          match_data => 'Dairy');
+$compare = "";
+$tree->do_query;
+$tree->tree;
+$rc = $compare eq 'Dairy';
+                  
+if ($rc == 1) {
+    print "ok 6\n";
+} else {
+    print "not ok 6: $compare\n";
 }
 
 ############# close the dbh

@@ -6,7 +6,7 @@ WriteMakefile(
     'VERSION_FROM' => 'Tree.pm', # finds $VERSION
 );
 
-$connstr = prompt ("DBI Connection String?", "DBI:mSQL:test:localhost:1114");
+$connstr = prompt ("DBI Connection String?", "DBI:mSQL:test");
 $userid  = prompt ("User ID?", "");
 $passwd  = prompt ("Password?", "");
 
