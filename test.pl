@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..6\n"; }
+BEGIN { $| = 1; print "1..11\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use DBIx::Tree;
 $loaded = 1;
@@ -52,19 +52,23 @@ while(<INSTALL>) {
 
         # ignore drop table.
         #
-        if (!$rc and ! /^drop/i) {
+        if (!$rc) {
+          if (/^drop/i) {
+            print STDERR "Ignoring failed DROP operation.\n"
+          } else {
             print "not ok 2\n";
             die "$DBI::errstr";
+          }
         }
 }
 close (INSTALL);
 
-############# create an instance of the DBIx::Tree 
-my $tree = new DBIx::Tree( connection => $dbh, 
-                          table      => 'food', 
-                          method     => sub { disp_tree(@_) },
-                          columns    => ['food_id', 'food', 'parent_id'],
-                          start_id   => '001');
+############# create an instance of the DBIx::Tree
+my $tree = new DBIx::Tree( connection => $dbh,
+			   table      => 'food',
+			   method     => sub { disp_tree(@_) },
+			   columns    => ['food_id', 'food', 'parent_id'],
+			   start_id   => '001');
 if(ref $tree eq 'DBIx::Tree') {
     print "ok 3\n";
 } else {
@@ -81,7 +85,7 @@ if ($tree->do_query) {
 ############# call tree
 use vars qw($compare);
 
-$tree->tree;
+$tree->traverse;
 $rc = $compare eq 'FoodBeans and NutsBeansBlack BeansKidney BeansBlack Kidney BeansRed Kidney BeansNutsPecansDairyBeveragesCoffee MilkSkim MilkWhole MilkCheesesCheddarGoudaMuensterStiltonSwiss';
 if ($rc == 1) {
     print "ok 5\n";
@@ -98,22 +102,95 @@ sub disp_tree {
 }
 
 ############# create another instance of the DBIx::Tree 
-my $tree = new DBIx::Tree(connection => $dbh, 
-                          table      => 'food', 
+my $tree = new DBIx::Tree(connection => $dbh,
+                          table      => 'food',
                           method     => sub { disp_tree(@_) },
                           columns    => ['food_id', 'food', 'parent_id'],
                           start_id   => '001',
                           match_data => 'Dairy');
 $compare = "";
-$tree->do_query;
-$tree->tree;
+$tree->traverse;
 $rc = $compare eq 'Dairy';
-                  
+
 if ($rc == 1) {
     print "ok 6\n";
 } else {
     print "not ok 6: $compare\n";
 }
 
+############# test local variables in traverse()
+
+$compare = "";
+$tree->traverse(start_id => '011', threshold => 2, match_data => '', limit => 2);
+$rc = $compare eq 'Coffee MilkSkim Milk';
+
+if ($rc == 1) {
+    print "ok 7\n";
+} else {
+    print "not ok 7: $compare\n";
+}
+
+### OK, now see if the default settings still work:
+
+$compare = "";
+$tree->traverse;
+$rc = $compare eq 'Dairy';
+
+if ($rc == 1) {
+    print "ok 8\n";
+} else {
+    print "not ok 8: $compare\n";
+}
+
+############# check out 'sth' constructor
+
+my $sth = $dbh->prepare('select food_id, food, parent_id from food order by food');
+my $tree = new DBIx::Tree(connection => $dbh,
+                          sth        => $sth,
+                          method     => sub { disp_tree(@_) },
+                          columns    => ['food_id', 'food', 'parent_id'],
+                          start_id   => '001');
+$compare = "";
+$tree->traverse;
+$rc = $compare eq 'FoodBeans and NutsBeansBlack BeansKidney BeansBlack Kidney BeansRed Kidney BeansNutsPecansDairyBeveragesCoffee MilkSkim MilkWhole MilkCheesesCheddarGoudaMuensterStiltonSwiss';
+
+if ($rc == 1) {
+    print "ok 9\n";
+} else {
+    print "not ok 9: $compare\n";
+}
+
+############# check out 'sql' constructor
+
+my $sql = 'select food_id, food, parent_id from food order by food';
+my $tree = new DBIx::Tree(connection => $dbh,
+                          sql        => $sql,
+                          method     => sub { disp_tree(@_) },
+                          columns    => ['food_id', 'food', 'parent_id'],
+                          start_id   => '001');
+$compare = "";
+$tree->traverse;
+$rc = $compare eq 'FoodBeans and NutsBeansBlack BeansKidney BeansBlack Kidney BeansRed Kidney BeansNutsPecansDairyBeveragesCoffee MilkSkim MilkWhole MilkCheesesCheddarGoudaMuensterStiltonSwiss';
+
+if ($rc == 1) {
+    print "ok 10\n";
+} else {
+    print "not ok 10: $compare\n";
+}
+
+############# check out the recursive function: repeat above tests
+
+$compare = "";
+$tree->traverse(recursive => 1);
+$rc = $compare eq 'FoodBeans and NutsBeansBlack BeansKidney BeansBlack Kidney BeansRed Kidney BeansNutsPecansDairyBeveragesCoffee MilkSkim MilkWhole MilkCheesesCheddarGoudaMuensterStiltonSwiss';
+
+if ($rc == 1) {
+    print "ok 11\n";
+} else {
+    print "not ok 11: $compare\n";
+}
+
+
 ############# close the dbh
+$dbh->do(q{drop table food});
 $dbh->disconnect;

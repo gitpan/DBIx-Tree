@@ -29,8 +29,7 @@ my $tree = new DBIx::Tree( connection => $dbh,
                           method     => sub { disp_tree(@_) },
                           columns    => ['food_id', 'food', 'parent_id'],
                           start_id   => '001');
-$tree->do_query;
-$tree->tree;
+$tree->traverse;
 
 my $mw = MainWindow->new();
 my $hlist = $mw->HList(

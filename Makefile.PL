@@ -2,11 +2,15 @@ use ExtUtils::MakeMaker qw(prompt WriteMakefile);
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
 WriteMakefile(
-    'NAME'	=> 'DBIx::Tree',
-    'VERSION_FROM' => 'Tree.pm', # finds $VERSION
+  AUTHOR => 'Brian Jepson (bjepson@jepstone.net)',
+  NAME	=> 'DBIx::Tree',
+  VERSION_FROM => 'Tree.pm', # finds $VERSION
+  PREREQ_PM    => {
+      'DBD::mysql'  => '0',
+  }
 );
 
-$connstr = prompt ("DBI Connection String?", "DBI:mSQL:test");
+$connstr = prompt ("DBI Connection String?", "DBI:mysql:test");
 $userid  = prompt ("User ID?", "");
 $passwd  = prompt ("Password?", "");
 

@@ -73,5 +73,7 @@ As of this version, this has only been tested on:
   Windows NT 4.0 SP3, ActivePerl 502, DBD::Sybase
   Sparc/Linux 2.0.35, Perl 5.004_04, DBD::mSQL
   RedHat Linux 6.1, Perl 5.005_04, DBD::mSQL
+  Mac OS X, Perl 5.6.0, Mac OS X 10.2.4
 
 Brian Jepson, bjepson@jepstone.net
+Sourceforge Project Page: http://sourceforge.net/projects/dbix-tree/

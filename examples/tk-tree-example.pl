@@ -38,8 +38,7 @@ my $dbtree = new DBIx::Tree( connection => $dbh,
 
 # Execute the query, and form the tree.
 #
-$dbtree->do_query;
-$dbtree->tree;
+$dbtree->traverse;
 
 # Create a new main window.
 #
