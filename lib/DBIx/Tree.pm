@@ -13,7 +13,7 @@ use Carp;
 @EXPORT = qw();
 @EXPORT_OK = qw();
 
-( $VERSION ) = '$Revision: 1.9 $' =~ /(?:\$Revision:\s+)?(\S+)/;
+( $VERSION ) = '$Revision: 1.91 $' =~ /(?:\$Revision:\s+)?(\S+)/;
 
 # Preloaded methods go here.
 
@@ -35,6 +35,7 @@ sub new {
 
     $self->{table}  = $args{table};
     $self->{method} = $args{method};
+    $self->{post_method} = $args{post_method};
     $self->{sth}    = $args{sth} || $args{sql};
 
     my $columns = $args{columns};
@@ -206,13 +207,22 @@ sub _handle_node {
 	$item = $self->{data}->[0]->{$self->{data_column}};
     }
 
+	# $item is not defined when the constructor is called with:
+	# o match_data = 'Some value', and
+	# o start_id   = Some value, and (presumably)
+	# o The id of the match data is not start_id.
+	# In this case, the above special call for finding the root does
+	# not return a valid value for item.
+
+    if (defined($item) && $self->{method} && ($level >= $self->{threshold}) )
+	{
     $self->{method}->
 	( item        => $item,
 	  level       => $level,
 	  id          => $id,
 	  parent_id   => $parentids,
-	  parent_name => $parentnames )
-	    if (exists $self->{method} && $level >= $self->{threshold});
+	  parent_name => $parentnames );
+	}
 
     $self->_do_query($id, undef, $level);
     push @{$parentids}, $id;
@@ -229,13 +239,15 @@ sub _handle_node {
     pop @{$parentids};
     pop @{$parentnames};
 
+    if (defined($item) && $self->{post_method} && ($level >= $self->{threshold}) )
+	{
     $self->{post_method}->
 	( item        => $item,
 	  level       => $level,
 	  id          => $id,
 	  parent_id   => $parentids,
-	  parent_name => $parentnames )
-	    if (exists $self->{post_method} && $level >= $self->{threshold});
+	  parent_name => $parentnames );
+	}
 }
 
 sub _traverse_linear {
@@ -348,7 +360,7 @@ sub _traverse_linear {
 		id          => $current,
 		parent_id   => \@parent_id,
 		parent_name => \@parent_name )
-		  if (exists $self->{method} && $level >= $self->{threshold});
+		  if ($self->{method} && $level >= $self->{threshold});
 
 
       }
@@ -378,13 +390,15 @@ sub _traverse_linear {
       my $current = pop @parent_id;
       my $item = pop @parent_name;
 
+      if ($self->{post_method} && ($level >= $self->{threshold}) )
+	  {
       $self->{post_method}->
 	  ( item        => $item,
 	    level       => $level,
 	    id          => $current,
 	    parent_id   => \@parent_id,
-	    parent_name => \@parent_name )
-	      if (exists $self->{post_method} && $level >= $self->{threshold});
+	    parent_name => \@parent_name );
+	  }
 
       $level--;
     }
@@ -661,6 +675,8 @@ Begins a depth-first traversal of the hierarchical tree.  The optional
 %args hash provides locally overriding values for the identical
 parameters set in the new() constructor.
 
+=back
+
 =head1 TODO
 
 Graceful handling of circular references.
@@ -681,6 +697,9 @@ improvements, ordering handling for tree output, and other bug fixes.
 
 Aaron Mackey <amackey@virginia.edu> has continued active development
 on the module based on Brian Jepson's version 0.91 release.
+
+Co-maintenance since V 1.91 is by Ron Savage <rsavage@cpan.org>.
+Uses of 'I' in previous versions is not me, but will be hereafter.
 
 =head1 SEE ALSO
 

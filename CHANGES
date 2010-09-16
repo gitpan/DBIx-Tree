@@ -1,12 +1,42 @@
 Revision history for Perl extension DBIx::Tree
 
-0.90  Sun Aug 30 17:08:09 1998
-    - original version; created by h2xs 1.18
+1.91  Wed Sep 15 14:08:00 2010
+	- Maintenance taken over by Ron Savage.
+	- Version numbering changed to x.xx format.
+	- Add Build.PL.
+	- Add MANIFEST.SKIP.
+	- Rename Changes to CHANGES.
+	- Move ./Tree.pm into ./lib/DBIx/Tree.pm.
+	- Move ./test.pl into ./t/test.t.
+	- Move ./INSTALL.SQL into ./t/.
+	- Add ./t/pod.t.
+	- Remove execute bit from doc files.
+	- Rewrite Makefile.PL.
+	- Used ini.report.pl (from Module::Metadata::Changes) to generate
+		machine-readable Changelog.ini.
+	- Patched as per RT#32461 (kindly reported (in 2008) by
+		huhlig [...] clickconsulting.com).
+	- Eliminate usage of file ./PWD.
+	- Fix t/*.t and examples/*.pl to use DBI_DSN, DBI_USER and DBI_PASS
+		from the environment, if defined, or to default to SQLite.
+		MySQL is no longer hard-coded anywhere.
+	- Fix bug where when the constructor call includes both match_data and
+		start_id, and the id of the match_data is not start_id, then the _do_query()
+		method would fail to find a record, which meant both the callbacks passed in
+		to the constructor (method and post_method), if defined, would be called with
+		an undefined value for $param{item}. This meant the callbacks would be called
+		one more time that they should have been. This faulty call took place before
+		any valid call took place.
+
+1.9   Sun Feb 14 12:00:00 2003
 
 0.91  Thu Aug 24 20:36:00 2000
     - added performance improvements, sorting, and bug fixes from
       Jan Mach <machj@ders.cz>
     - added limit and matching support from Ilia Lobsanov <ilia@lobsanov.com>
+
+0.90  Sun Aug 30 17:08:09 1998
+    - original version; created by h2xs 1.18
 
 X.XX
     - active development begun by Aaron Mackey <amackey@virginia.edu>

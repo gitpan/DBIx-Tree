@@ -1,6 +1,14 @@
 # Before `make install' is performed this script should be runnable with
 # `make test'. After `make install' it should work as `perl test.pl'
 
+sub disp_tree {
+    %param = @_;
+	#print STDERR ($param{item} || 'N/A'), "\n";
+    my $item = $param{item};
+    $item =~ s/^\s+//;
+    $item =~ s/\s+$//;
+    $compare .= $item;
+}
 ######################### We start with some black magic to print on failure.
 
 # Change 1..1 below to 1..last_test_to_print .
@@ -8,6 +16,7 @@
 
 BEGIN { $| = 1; print "1..11\n"; }
 END {print "not ok 1\n" unless $loaded;}
+
 use DBIx::Tree;
 $loaded = 1;
 print "ok 1\n";
@@ -19,16 +28,15 @@ print "ok 1\n";
 # of the test code):
 
 ############# create and populate the table we need.
-open (PWD, "PWD") 
-  or (print "not ok 2\n" and die "Could not open PWD for reading!");
-while(<PWD>) {
-        chomp;
-        push @dbiparms, $_;
-}
-close (PWD);
+my @opts =
+(
+$ENV{DBI_DSN} || 'dbi:SQLite:dbname=/tmp/test.sqlite',
+$ENV{DBI_USER} || '',
+$ENV{DBI_PASS} || '',
+);
 
 use DBI;
-my $dbh = DBI->connect(@dbiparms);
+my $dbh = DBI->connect(@opts, {RaiseError => 0, PrintError => 1, AutoCommit => 1});
 if ( defined $dbh ) {
         print "ok 2\n";
 } else {
@@ -36,18 +44,23 @@ if ( defined $dbh ) {
         die $DBI::errstr;
 }
 
-open (INSTALL, "INSTALL.SQL") 
-  or (print "not ok 2\n" and die "Could not open INSTALL.SQL for reading!");
+open (INSTALL, "t/INSTALL.SQL")
+  or (print "not ok 2\n" and die "Could not open t/INSTALL.SQL for reading!");
 while(<INSTALL>) {
         chomp;
 
 	# strip out NULL for mSQL
 	#
-	if (/^create/i and $dbiparms[0] =~ /msql/i) {
+	if (/^create/i and $opts[0] =~ /msql/i) {
 	    s/null//gi;
 	}
 
         my $sth = $dbh->prepare($_);
+
+		# Skip failure to drop non-existent table.
+
+		next if (! defined $sth);
+
         my $rc = $sth->execute;
 
         # ignore drop table.
@@ -64,10 +77,11 @@ while(<INSTALL>) {
 close (INSTALL);
 
 ############# create an instance of the DBIx::Tree
+{
 my $tree = new DBIx::Tree( connection => $dbh,
 			   table      => 'food',
 			   method     => sub { disp_tree(@_) },
-			   columns    => ['food_id', 'food', 'parent_id'],
+			   columns    => ['id', 'food', 'parent_id'],
 			   start_id   => '001');
 if(ref $tree eq 'DBIx::Tree') {
     print "ok 3\n";
@@ -76,7 +90,7 @@ if(ref $tree eq 'DBIx::Tree') {
 }
 
 ############# call do_query
-if ($tree->do_query) {
+if ($tree->_do_query) {
     print "ok 4\n";
 } else {
     print "not ok 4\n";
@@ -93,19 +107,13 @@ if ($rc == 1) {
     print "not ok 5\n";
 }
 
-sub disp_tree {
-    %parms = @_;
-    my $item = $parms{item};
-    $item =~ s/^\s+//;
-    $item =~ s/\s+$//;
-    $compare .= $item;
 }
-
 ############# create another instance of the DBIx::Tree 
+{
 my $tree = new DBIx::Tree(connection => $dbh,
                           table      => 'food',
                           method     => sub { disp_tree(@_) },
-                          columns    => ['food_id', 'food', 'parent_id'],
+                          columns    => ['id', 'food', 'parent_id'],
                           start_id   => '001',
                           match_data => 'Dairy');
 $compare = "";
@@ -141,14 +149,15 @@ if ($rc == 1) {
 } else {
     print "not ok 8: $compare\n";
 }
+}
 
 ############# check out 'sth' constructor
-
-my $sth = $dbh->prepare('select food_id, food, parent_id from food order by food');
+{
+my $sth = $dbh->prepare('select id, food, parent_id from food order by food');
 my $tree = new DBIx::Tree(connection => $dbh,
                           sth        => $sth,
                           method     => sub { disp_tree(@_) },
-                          columns    => ['food_id', 'food', 'parent_id'],
+                          columns    => ['id', 'food', 'parent_id'],
                           start_id   => '001');
 $compare = "";
 $tree->traverse;
@@ -159,14 +168,15 @@ if ($rc == 1) {
 } else {
     print "not ok 9: $compare\n";
 }
+}
 
 ############# check out 'sql' constructor
-
-my $sql = 'select food_id, food, parent_id from food order by food';
+{
+my $sql = 'select id, food, parent_id from food order by food';
 my $tree = new DBIx::Tree(connection => $dbh,
                           sql        => $sql,
                           method     => sub { disp_tree(@_) },
-                          columns    => ['food_id', 'food', 'parent_id'],
+                          columns    => ['id', 'food', 'parent_id'],
                           start_id   => '001');
 $compare = "";
 $tree->traverse;
@@ -189,7 +199,7 @@ if ($rc == 1) {
 } else {
     print "not ok 11: $compare\n";
 }
-
+}
 
 ############# close the dbh
 $dbh->do(q{drop table food});
