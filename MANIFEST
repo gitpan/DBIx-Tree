@@ -6,6 +6,7 @@ examples/tkexample.pl
 lib/DBIx/Tree.pm
 Makefile.PL
 MANIFEST
+META.json
 META.yml
 README
 t/INSTALL.SQL

@@ -7,14 +7,14 @@ require Exporter;
 use Carp;
 use DBI;
 
-@ISA = qw(Exporter AutoLoader);
+@ISA = qw(Exporter);
 # Items to export into callers namespace by default. Note: do not export
 # names by default without a very good reason. Use EXPORT_OK instead.
 # Do not simply export all your public functions/methods/constants.
 @EXPORT = qw();
 @EXPORT_OK = qw();
 
-( $VERSION ) = '$Revision: 1.94 $' =~ /(?:\$Revision:\s+)?(\S+)/;
+( $VERSION ) = '$Revision: 1.95 $' =~ /(?:\$Revision:\s+)?(\S+)/;
 
 # Preloaded methods go here.
 
@@ -418,7 +418,7 @@ __END__
 
 =head1 NAME
 
-DBIx::Tree - Perl module for generating a tree from a self-referential table
+DBIx::Tree - Generate a tree from a self-referential database table
 
 =head1 SYNOPSIS
 
@@ -536,8 +536,8 @@ and two Tk examples.
 
 =item connection
 
-A DBI connection handle.  Unnecessary if you plan to provide a
-prepared DBI statement handle via the 'sth' parameter.
+A DBI connection handle. This parameter is always required. Earlier versions of this doc said it was
+not necessary when using the $sth option, but in that case omitting it gets an error on prepare_cached.
 
 =item table
 
