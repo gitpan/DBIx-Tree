@@ -1,5 +1,16 @@
 Revision history for Perl extension DBIx::Tree
 
+1.97  Thu Dec 18 10:11:00 2014
+	- Rename CHANGES back to Changes.
+	- Put methods into alphabetical order.
+	- Reformat the code slightly.
+	- Restructure the docs.
+	- Add use string and warnings to Build.PL and Makefile.PL.
+	- Add github repo stuff to docs, Build.PL and Makefile.PL.
+	- Use Test::More in t/test.t.
+	- Change usage of new() from 'new DBI::Tree()' to DBIx::Tree -> new()'.
+	- Add scripts/demo.pl.
+
 1.96  Thu Nov  8 12:38:00 2012
 	- No code changes.
 	- For pre-reqs such as strict, warnings, etc, which ship with Perl, set the version # to 0.
